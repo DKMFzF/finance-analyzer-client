@@ -1,8 +1,8 @@
 # Web-based financial analysis service with an AI tool
 
-[дока на русском](./docs/README.ru.md)
+[Дока на русском](./docs/README.ru.md)
 
-## **Basic functionality:** 
+## **Basic functionality** 
 
 1. The function of registration and authorization in the application.
 2. The function of entering the user's spending history.
@@ -12,7 +12,7 @@
 6. The function of deleting expenses from the history.
 7. The function of editing the already deposited expenses.
 
-## **Analytics Functions:**
+## **Analytics Functions**
 
 8. The function calculates the total amount of expenses for the period.
 9. The function calculates the total amount of income for the period.
@@ -20,7 +20,7 @@
 11. The function of generating a report on the categories of expenses.
 12. The function compares expenses for the current month with the previous one.
 
-## **Additional functionality:**
+## **Additional functionality**
 
 13. Functionality that allows you to study financial management methods in a separate tab.
 14. The function of predicting spending for the next month.
