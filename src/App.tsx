@@ -8,6 +8,7 @@ interface Transaction {
 	description: string;
 	amount: number;
 	date: string;
+	category?: string; // Добавляем категорию для расходов
 }
 
 // Ключ для localStorage
@@ -33,6 +34,12 @@ const App: React.FC = () => {
 		loadData().transactions
 	);
 	const [income, setIncome] = useState<number>(loadData().income);
+	const [currentMonth, setCurrentMonth] = useState<number>(
+		new Date().getMonth()
+	);
+	const [currentYear, setCurrentYear] = useState<number>(
+		new Date().getFullYear()
+	);
 
 	// Сохраняем данные в localStorage при изменении состояния
 	useEffect(() => {
@@ -99,6 +106,84 @@ const App: React.FC = () => {
 		);
 	};
 
+	// 9. Функция подсчёта общей суммы расходов за период
+	const getTotalExpensesForPeriod = (
+		startDate: string,
+		endDate: string
+	): number => {
+		return transactions
+			.filter(
+				(transaction) =>
+					transaction.date >= startDate && transaction.date <= endDate
+			)
+			.reduce((sum, transaction) => sum + transaction.amount, 0);
+	};
+
+	// 10. Функция подсчёта общей суммы доходов за период
+	const getTotalIncomeForPeriod = (
+		startDate: string,
+		endDate: string
+	): number => {
+		// В вашем текущем коде доходы не привязаны к дате, поэтому просто возвращаем весь доход
+		// Если нужно учитывать доходы по датам, нужно изменить структуру хранения доходов
+		return income;
+	};
+
+	// 11. Функция вычисления разницы между доходами и расходами за месяц
+	const getMonthlyBalance = (month: number, year: number): number => {
+		const monthlyExpenses = getMonthlyExpenses(month, year).reduce(
+			(sum, transaction) => sum + transaction.amount,
+			0
+		);
+		return income - monthlyExpenses;
+	};
+
+	// 12. Функция формирования отчёта по категориям расходов
+	const getCategoryReport = (
+		month: number,
+		year: number
+	): Record<string, number> => {
+		const monthlyExpenses = getMonthlyExpenses(month, year);
+		const report: Record<string, number> = {};
+
+		monthlyExpenses.forEach((expense) => {
+			const category = expense.category || 'Без категории';
+			report[category] = (report[category] || 0) + expense.amount;
+		});
+
+		return report;
+	};
+
+	// 13. Функция сравнения расходов за текущий месяц с прошлым
+	const compareWithPreviousMonth = (): {
+		current: number;
+		previous: number;
+		difference: number;
+	} => {
+		const currentMonthExpenses = getMonthlyExpenses(
+			currentMonth,
+			currentYear
+		).reduce((sum, transaction) => sum + transaction.amount, 0);
+
+		let prevMonth = currentMonth - 1;
+		let prevYear = currentYear;
+		if (prevMonth < 0) {
+			prevMonth = 11;
+			prevYear--;
+		}
+
+		const previousMonthExpenses = getMonthlyExpenses(
+			prevMonth,
+			prevYear
+		).reduce((sum, transaction) => sum + transaction.amount, 0);
+
+		return {
+			current: currentMonthExpenses,
+			previous: previousMonthExpenses,
+			difference: currentMonthExpenses - previousMonthExpenses,
+		};
+	};
+
 	return (
 		<div>
 			<h1>Учет финансов</h1>
@@ -119,6 +204,11 @@ const App: React.FC = () => {
 				<input type='text' placeholder='Описание' id='description' />
 				<input type='number' placeholder='Сумма' id='amount' />
 				<input type='date' id='date' />
+				<input
+					type='text'
+					placeholder='Категория (опционально)'
+					id='category'
+				/>
 				<button
 					onClick={() =>
 						addExpense({
@@ -129,6 +219,9 @@ const App: React.FC = () => {
 								(document.getElementById('amount') as HTMLInputElement).value
 							),
 							date: (document.getElementById('date') as HTMLInputElement).value,
+							category: (
+								document.getElementById('category') as HTMLInputElement
+							).value,
 						})
 					}>
 					Добавить трату
@@ -138,19 +231,39 @@ const App: React.FC = () => {
 			{/* Просмотр истории трат за месяц */}
 			<div>
 				<h2>История трат за месяц</h2>
+				<div>
+					<label>
+						Месяц:
+						<input
+							type='month'
+							value={`${currentYear}-${String(currentMonth + 1).padStart(
+								2,
+								'0'
+							)}`}
+							onChange={(e) => {
+								const [year, month] = e.target.value.split('-');
+								setCurrentMonth(parseInt(month) - 1);
+								setCurrentYear(parseInt(year));
+							}}
+						/>
+					</label>
+				</div>
 				<ul>
-					{getMonthlyExpenses(
-						new Date().getMonth(),
-						new Date().getFullYear()
-					).map((expense) => (
+					{getMonthlyExpenses(currentMonth, currentYear).map((expense) => (
 						<li key={expense.id}>
-							{expense.description} - {expense.amount} руб. ({expense.date})
+							{expense.description} - {expense.amount} руб. ({expense.date}){' '}
+							{expense.category && `[${expense.category}]`}
 							<button onClick={() => deleteExpense(expense.id)}>Удалить</button>
 							<button
 								onClick={() =>
 									editExpense(expense.id, {
-										description: 'Новое описание',
-										amount: 1000,
+										description:
+											prompt('Новое описание:', expense.description) ||
+											expense.description,
+										amount: parseFloat(
+											prompt('Новая сумма:', expense.amount.toString()) ||
+												expense.amount.toString()
+										),
 									})
 								}>
 								Редактировать
@@ -163,7 +276,71 @@ const App: React.FC = () => {
 			{/* График трат за месяц */}
 			<div>
 				<h2>График трат за месяц</h2>
-				{renderChart(new Date().getMonth(), new Date().getFullYear())}
+				{renderChart(currentMonth, currentYear)}
+			</div>
+
+			{/* Новые функции */}
+			<div>
+				<h2>Финансовый отчёт</h2>
+
+				{/* 9. Общая сумма расходов за период */}
+				<div>
+					<h3>Общие расходы за месяц</h3>
+					<p>
+						{getMonthlyExpenses(currentMonth, currentYear).reduce(
+							(sum, transaction) => sum + transaction.amount,
+							0
+						)}{' '}
+						руб.
+					</p>
+				</div>
+
+				{/* 10. Общая сумма доходов */}
+				<div>
+					<h3>Общие доходы</h3>
+					<p>{income} руб.</p>
+				</div>
+
+				{/* 11. Разница между доходами и расходами */}
+				<div>
+					<h3>Баланс за месяц</h3>
+					<p>{getMonthlyBalance(currentMonth, currentYear)} руб.</p>
+				</div>
+
+				{/* 12. Отчёт по категориям */}
+				<div>
+					<h3>Расходы по категориям</h3>
+					<ul>
+						{Object.entries(getCategoryReport(currentMonth, currentYear)).map(
+							([category, amount]) => (
+								<li key={category}>
+									{category}: {amount} руб.
+								</li>
+							)
+						)}
+					</ul>
+				</div>
+
+				{/* 13. Сравнение с прошлым месяцем */}
+				<div>
+					<h3>Сравнение с прошлым месяцем</h3>
+					{(() => {
+						const comparison = compareWithPreviousMonth();
+						return (
+							<>
+								<p>Текущий месяц: {comparison.current} руб.</p>
+								<p>Прошлый месяц: {comparison.previous} руб.</p>
+								<p
+									style={{
+										color: comparison.difference >= 0 ? 'red' : 'green',
+									}}>
+									Разница: {Math.abs(comparison.difference)} руб. (
+									{comparison.difference >= 0 ? 'больше' : 'меньше'})
+								</p>
+							</>
+						);
+					})()}
+				</div>
 			</div>
 		</div>
 	);
