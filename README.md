@@ -1,5 +1,7 @@
 # Web-based financial analysis service with an AI tool
 
+Если кто то сюда зайдёт, занайте, эта хуйня была донаписанна дик-сиком одним компонентом, за 15 минут до пары
+
 ## **Basic functionality**
 
 sprint 1 (authorization services)
